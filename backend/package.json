@@ -1,0 +1,41 @@
+{
+  "name": "fasoconnect-backend",
+  "version": "1.0.0",
+  "description": "Backend API for FasoConnect",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "test": "node --test",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio",
+    "prisma:validate": "prisma validate"
+  },
+  "keywords": [
+    "fasoconnect",
+    "express",
+    "prisma",
+    "postgresql"
+  ],
+  "author": "Sawadogo Salif",
+  "license": "ISC",
+  "dependencies": {
+    "@prisma/client": "^6.16.3",
+    "bcrypt": "^6.0.0",
+    "cloudinary": "^2.10.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0",
+    "multer": "^2.0.2",
+    "zod": "^4.1.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10",
+    "prisma": "^6.16.3"
+  }
+}

@@ -1,0 +1,31 @@
+# Dependencies
+node_modules
+
+# Environment variables
+.env
+.env.local
+
+# Backend build/runtime artifacts
+backend/generated/
+backend/db-backups/
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Web build output
+web/dist
+
+# Personal / delivery files — not part of the app source
+*.zip
+*.pdf
+backend_tree.txt
+thesis/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local tool config (not meant to be shared)
+.claude/settings.local.json
+.codex/

@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls \"/c/Users/USER/AppData/Local/Temp/claude/c--Users-USER-Desktop-Project-FasoConnect/13532c46-7e93-490e-b37a-8036b1a700f2/scratchpad/\" | grep uml)",
+      "Read(//c/Users/USER/AppData/Local/Temp/claude/c--Users-USER-Desktop-Project-FasoConnect/13532c46-7e93-490e-b37a-8036b1a700f2/scratchpad//**)",
+      "Bash(\"/c/Users/USER/AppData/Local/Temp/claude/c--Users-USER-Desktop-Project-FasoConnect/13532c46-7e93-490e-b37a-8036b1a700f2/scratchpad/tectonic/tectonic.exe\" main.tex)",
+      "Bash(pdftotext main.pdf -)",
+      "Bash(awk 'BEGIN{p=1} /\\\\f/{p++} /Manage users$/{print \"physpage:\",p}')",
+      "Bash(/c/Users/USER/AppData/Local/Temp/claude/c--Users-USER-Desktop-Project-FasoConnect/13532c46-7e93-490e-b37a-8036b1a700f2/scratchpad/poppler/poppler-26.02.0/Library/bin/pdftoppm.exe -png -r 150 -f 18 -l 18 main.pdf /c/Users/USER/AppData/Local/Temp/claude/c--Users-USER-Desktop-Project-FasoConnect/13532c46-7e93-490e-b37a-8036b1a700f2/scratchpad/uml_ucd2)",
+      "Bash(rm -f *.aux *.log *.out *.toc *.fls *.fdb_latexmk *.synctex.gz)",
+      "Bash(cp \"main.pdf\" \"C:/Users/USER/Desktop/Project/FasoConnect/thesis/FasoConnect_UML_UseCase_Sequence_Diagrams.pdf\")",
+      "Bash(find /c/Users/USER/AppData/Local/Temp/claude -iname \"tectonic.exe\" 2>/dev/null | head -1)",
+      "Read(//c/Users/USER/AppData/Local/Temp/claude/**)",
+      "Bash(\"/c/Users/USER/AppData/Local/Temp/claude/c--Users-USER-Desktop-Project-FasoConnect/13532c46-7e93-490e-b37a-8036b1a700f2/scratchpad/tectonic/tectonic.exe\" main.tex --keep-logs)",
+      "Read(//c/Users/USER/AppData/Local/Temp/claude/c--Users-USER-Desktop-Project-FasoConnect/13532c46-7e93-490e-b37a-8036b1a700f2/scratchpad/poppler/poppler-26.02.0/Library/bin/**)",
+      "Bash(/c/Users/USER/AppData/Local/Temp/claude/c--Users-USER-Desktop-Project-FasoConnect/13532c46-7e93-490e-b37a-8036b1a700f2/scratchpad/poppler/poppler-26.02.0/Library/bin/pdftoppm.exe -png -r 150 -f 1 -l 2 main.pdf /c/Users/USER/AppData/Local/Temp/claude/c--Users-USER-Desktop-Project-FasoConnect/13532c46-7e93-490e-b37a-8036b1a700f2/scratchpad/titlepage_new)",
+      "Bash(ls \"/c/Users/USER/AppData/Local/Temp/claude/c--Users-USER-Desktop-Project-FasoConnect/13532c46-7e93-490e-b37a-8036b1a700f2/scratchpad/\" | grep titlepage_new)",
+      "Bash(/c/Users/USER/AppData/Local/Temp/claude/c--Users-USER-Desktop-Project-FasoConnect/13532c46-7e93-490e-b37a-8036b1a700f2/scratchpad/poppler/poppler-26.02.0/Library/bin/pdftoppm.exe -png -r 150 -f 1 -l 2 main.pdf /c/Users/USER/AppData/Local/Temp/claude/c--Users-USER-Desktop-Project-FasoConnect/13532c46-7e93-490e-b37a-8036b1a700f2/scratchpad/titlepage_v2)"
+    ]
+  }
+}

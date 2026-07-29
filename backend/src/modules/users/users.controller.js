@@ -2,12 +2,14 @@ import asyncHandler from '../../common/asyncHandler.js';
 import AppError from '../../common/appError.js';
 import {
   changePasswordSchema,
+  createUserSchema,
   listUsersQuerySchema,
   profileUpdateSchema,
   updateUserStatusSchema,
   userParamSchema,
 } from '../../validators/user.validator.js';
 import {
+  createUserService,
   getUserProfileById,
   listUsersService,
   updateUserProfile,
@@ -31,6 +33,18 @@ export const listUsers = asyncHandler(async (req, res, next) => {
   const result = await listUsersService(parsed.data);
 
   res.status(200).json({ success: true, data: result.data, pagination: result.pagination });
+});
+
+export const createUser = asyncHandler(async (req, res, next) => {
+  const parsed = createUserSchema.safeParse(req.body);
+  if (!parsed.success) {
+    const issue = parsed.error.issues?.[0] || parsed.error.errors?.[0];
+    return next(new AppError(issue?.message || 'Invalid request data', 400));
+  }
+
+  const user = await createUserService(parsed.data);
+
+  res.status(201).json({ success: true, data: user });
 });
 
 export const updateUserStatus = asyncHandler(async (req, res, next) => {

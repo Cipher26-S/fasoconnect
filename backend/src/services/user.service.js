@@ -92,6 +92,20 @@ export const updateUserStatusService = async (userId, status) => {
   return prisma.user.update({ where: { id: userId }, data: { status }, select: adminUserSelect });
 };
 
+export const createUserService = async ({ fullName, email, password, phone, role, status }) => {
+  const existing = await prisma.user.findUnique({ where: { email } });
+  if (existing) {
+    throw new AppError('A user with this email already exists', 409);
+  }
+
+  const hashedPassword = await bcrypt.hash(password, 12);
+
+  return prisma.user.create({
+    data: { fullName, email, password: hashedPassword, phone, role, status },
+    select: adminUserSelect,
+  });
+};
+
 export const changeUserPassword = async (userId, currentPassword, newPassword) => {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) {

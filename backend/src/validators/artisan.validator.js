@@ -19,6 +19,19 @@ export const artisanProfileSchema = z.object({
   profilePicture: z.string().optional(),
 });
 
+export const createArtisanSchema = z.object({
+  fullName: z.string().min(2, 'Full name is required'),
+  email: z.string().email('A valid email is required'),
+  password: z.string().min(6, 'Password must contain at least 6 characters'),
+  phone: z.string().optional(),
+  city: z.string().optional(),
+  country: z.string().optional(),
+  categoryId: z.string().min(1, 'Category is required'),
+  experienceYears: z.coerce.number().int().min(0),
+  hourlyRate: z.coerce.number().positive().optional(),
+  availability: z.coerce.boolean().optional(),
+});
+
 export const verifyArtisanSchema = z.object({
   verified: z.coerce.boolean().optional().default(true),
 });

@@ -2,6 +2,7 @@ import express from 'express';
 import auth, { authorizeRoles } from '../../middleware/auth.js';
 import upload from '../../middleware/upload.js';
 import {
+  createArtisan,
   createOrUpdateArtisanProfile,
   deleteArtisanProfile,
   getArtisanProfile,
@@ -14,6 +15,7 @@ import {
 const router = express.Router();
 
 router.get('/', listArtisans);
+router.post('/', auth, authorizeRoles('ADMIN'), createArtisan);
 router.get('/profile', auth, authorizeRoles('ARTISAN'), getMyArtisanProfile);
 router.post('/profile', auth, authorizeRoles('ARTISAN'), upload.single('profilePicture'), createOrUpdateArtisanProfile);
 router.put('/profile', auth, authorizeRoles('ARTISAN'), upload.single('profilePicture'), updateArtisanProfile);

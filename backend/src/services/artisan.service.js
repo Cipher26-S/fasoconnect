@@ -1,3 +1,4 @@
+import bcrypt from 'bcrypt';
 import { v2 as cloudinary } from 'cloudinary';
 import prisma from '../config/prisma.js';
 import AppError from '../common/appError.js';
@@ -128,6 +129,53 @@ export const upsertArtisanProfile = async (userId, data) => {
     });
 
     return { artisan, created: !existing };
+  } catch (error) {
+    if (error?.code === 'P2003') {
+      throw new AppError('Invalid category reference', 400);
+    }
+    throw error;
+  }
+};
+
+export const createArtisanByAdminService = async ({
+  fullName,
+  email,
+  password,
+  phone,
+  city,
+  country,
+  categoryId,
+  experienceYears,
+  hourlyRate,
+  availability,
+}) => {
+  const existing = await prisma.user.findUnique({ where: { email } });
+  if (existing) {
+    throw new AppError('A user with this email already exists', 409);
+  }
+
+  const hashedPassword = await bcrypt.hash(password, 12);
+
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: { fullName, email, password: hashedPassword, phone, city, country, role: 'ARTISAN' },
+      });
+
+      return tx.artisan.create({
+        data: {
+          userId: user.id,
+          categoryId,
+          experienceYears,
+          hourlyRate,
+          availability: availability ?? true,
+        },
+        include: {
+          user: { select: userSelect },
+          category: true,
+        },
+      });
+    });
   } catch (error) {
     if (error?.code === 'P2003') {
       throw new AppError('Invalid category reference', 400);

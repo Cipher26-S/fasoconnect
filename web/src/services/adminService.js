@@ -50,6 +50,10 @@ export const adminService = {
     const { data } = await api.get('/api/users', { params });
     return data;
   },
+  async createUser(payload) {
+    const { data } = await api.post('/api/users', payload);
+    return data.data;
+  },
   async updateUserStatus(id, status) {
     const { data } = await api.patch(`/api/users/${id}/status`, { status });
     return data.data;
@@ -58,6 +62,10 @@ export const adminService = {
   async artisans(params = {}) {
     const { data } = await api.get('/api/artisans', { params });
     return data;
+  },
+  async createArtisan(payload) {
+    const { data } = await api.post('/api/artisans', payload);
+    return data.data;
   },
   async verifyArtisan(id, verified = true) {
     const { data } = await api.patch(`/api/artisans/${id}/verify`, { verified });

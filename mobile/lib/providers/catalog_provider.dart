@@ -52,11 +52,17 @@ class CatalogProvider extends ChangeNotifier {
   Future<List<Review>> reviewsForUser(String userId) => _service.reviewsForUser(userId);
 
   Future<void> toggleFavorite(String artisanId) async {
+    final isFavorite = favorites.any((artisan) => artisan.id == artisanId);
     try {
-      await _service.addFavorite(artisanId);
-    } catch (_) {
-      await _service.removeFavorite(artisanId);
+      if (isFavorite) {
+        await _service.removeFavorite(artisanId);
+      } else {
+        await _service.addFavorite(artisanId);
+      }
+      await load();
+    } catch (exception) {
+      error = apiErrorMessage(exception);
+      notifyListeners();
     }
-    await load();
   }
 }

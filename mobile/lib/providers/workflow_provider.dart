@@ -44,13 +44,23 @@ class WorkflowProvider extends ChangeNotifier {
   }
 
   Future<void> cancel(String id) async {
-    await _service.updateStatus(id, 'CANCELLED');
-    await load();
+    try {
+      await _service.updateStatus(id, 'CANCELLED');
+      await load();
+    } catch (exception) {
+      error = apiErrorMessage(exception);
+      notifyListeners();
+    }
   }
 
   Future<void> readNotification(String id) async {
-    await _service.markNotificationRead(id);
-    await load();
+    try {
+      await _service.markNotificationRead(id);
+      await load();
+    } catch (exception) {
+      error = apiErrorMessage(exception);
+      notifyListeners();
+    }
   }
 
   Future<void> submitReview({required String serviceRequestId, required int rating, String? comment}) async {

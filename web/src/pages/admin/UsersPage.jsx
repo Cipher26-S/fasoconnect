@@ -18,18 +18,45 @@ export function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
   const [busyId, setBusyId] = useState(null);
+  const [creating, setCreating] = useState(false);
+  const [newUser, setNewUser] = useState({ fullName: '', email: '', password: '', phone: '', role: 'CUSTOMER' });
+  const [createSubmitting, setCreateSubmitting] = useState(false);
+  const [createError, setCreateError] = useState('');
+
+  const loadStats = () => adminService.userStats().then(setStats);
 
   useEffect(() => {
-    adminService.userStats().then(setStats);
+    loadStats();
   }, []);
 
-  useEffect(() => {
+  const loadUsers = () => {
     setLoading(true);
-    adminService
+    return adminService
       .users({ page, limit: 10, role: role || undefined, status: status || undefined, search: search || undefined })
       .then(setResult)
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadUsers();
   }, [page, role, status, search]);
+
+  const onCreateUser = async (event) => {
+    event.preventDefault();
+    setCreateSubmitting(true);
+    setCreateError('');
+    try {
+      await adminService.createUser(newUser);
+      setNewUser({ fullName: '', email: '', password: '', phone: '', role: 'CUSTOMER' });
+      setCreating(false);
+      await loadUsers();
+      loadStats();
+    } catch (apiError) {
+      setCreateError(apiError.response?.data?.message || 'Unable to create user.');
+    } finally {
+      setCreateSubmitting(false);
+    }
+  };
 
   const toggleStatus = async (user) => {
     setBusyId(user.id);
@@ -50,7 +77,7 @@ export function UsersPage() {
     <AdminLayout title="Users Management" searchPlaceholder="Search for users, artisans..." onSearch={(value) => { setPage(1); setSearch(value); }}>
       <div className="-mt-4 mb-6 flex flex-wrap items-center justify-between gap-3">
         <p className="max-w-xl text-sm text-on-surface-variant">Manage and monitor all platform users and their activity status.</p>
-        <button type="button" className="flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary hover:brightness-105">
+        <button type="button" onClick={() => setCreating(true)} className="flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary hover:brightness-105">
           <UserPlus className="h-4 w-4" /> Add New User
         </button>
       </div>
@@ -143,6 +170,68 @@ export function UsersPage() {
 
         <Pagination page={result.pagination?.page ?? 1} totalPages={result.pagination?.totalPages ?? 1} total={result.pagination?.total ?? 0} onChange={setPage} />
       </section>
+
+      {creating && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-secondary/40 px-4" onClick={() => setCreating(false)}>
+          <div className="w-full max-w-md rounded-lg bg-surface-container-lowest p-6 shadow-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="flex items-start justify-between">
+              <h3 className="font-headline text-xl font-bold">Add New User</h3>
+              <button type="button" onClick={() => setCreating(false)} className="grid h-8 w-8 place-items-center rounded-full hover:bg-surface-container-low">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <form className="mt-4 space-y-3" onSubmit={onCreateUser}>
+              <input
+                required
+                placeholder="Full name"
+                value={newUser.fullName}
+                onChange={(event) => setNewUser((current) => ({ ...current, fullName: event.target.value }))}
+                className="w-full rounded-md border border-outline-variant bg-surface px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+              />
+              <input
+                required
+                type="email"
+                placeholder="Email"
+                value={newUser.email}
+                onChange={(event) => setNewUser((current) => ({ ...current, email: event.target.value }))}
+                className="w-full rounded-md border border-outline-variant bg-surface px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+              />
+              <input
+                required
+                type="password"
+                placeholder="Password"
+                minLength={6}
+                value={newUser.password}
+                onChange={(event) => setNewUser((current) => ({ ...current, password: event.target.value }))}
+                className="w-full rounded-md border border-outline-variant bg-surface px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+              />
+              <input
+                placeholder="Phone (optional)"
+                value={newUser.phone}
+                onChange={(event) => setNewUser((current) => ({ ...current, phone: event.target.value }))}
+                className="w-full rounded-md border border-outline-variant bg-surface px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+              />
+              <select
+                value={newUser.role}
+                onChange={(event) => setNewUser((current) => ({ ...current, role: event.target.value }))}
+                className="w-full rounded-md border border-outline-variant bg-surface px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+              >
+                {Object.entries(ROLE_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+              {createError && <p className="text-sm font-semibold text-error">{createError}</p>}
+              <button
+                type="submit"
+                disabled={createSubmitting}
+                className="flex w-full items-center justify-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary hover:brightness-105 disabled:opacity-60"
+              >
+                <UserPlus className="h-4 w-4" /> {createSubmitting ? 'Adding...' : 'Add User'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       {selected && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-secondary/40 px-4" onClick={() => setSelected(null)}>

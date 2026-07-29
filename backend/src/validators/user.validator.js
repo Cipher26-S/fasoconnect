@@ -29,3 +29,12 @@ export const listUsersQuerySchema = z.object({
 export const updateUserStatusSchema = z.object({
   status: z.enum(['ACTIVE', 'SUSPENDED']),
 });
+
+export const createUserSchema = z.object({
+  fullName: z.string().min(2, 'Full name is required'),
+  email: z.string().email('A valid email is required'),
+  password: z.string().min(6, 'Password must contain at least 6 characters'),
+  phone: z.string().optional(),
+  role: z.enum(['ADMIN', 'CUSTOMER', 'ARTISAN']).optional().default('CUSTOMER'),
+  status: z.enum(['ACTIVE', 'SUSPENDED']).optional().default('ACTIVE'),
+});

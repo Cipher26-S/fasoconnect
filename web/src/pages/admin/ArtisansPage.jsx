@@ -1,9 +1,11 @@
-import { CheckCircle2, ShieldCheck, Star, UserPlus, Wrench, XCircle } from 'lucide-react';
+import { CheckCircle2, ShieldCheck, Star, UserPlus, Wrench, X, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { AdminLayout } from '../../layouts/AdminLayout.jsx';
 import { Pagination } from '../../components/admin/Pagination.jsx';
 import { StatCard } from '../../components/admin/StatCard.jsx';
 import { adminService } from '../../services/adminService.js';
+
+const emptyArtisanForm = { fullName: '', email: '', password: '', phone: '', city: '', categoryId: '', experienceYears: '', hourlyRate: '' };
 
 const TABS = [
   { key: '', label: 'All Artisans' },
@@ -19,18 +21,51 @@ export function ArtisansPage() {
   const [result, setResult] = useState({ data: [], pagination: { page: 1, totalPages: 1, total: 0 } });
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState(null);
+  const [categories, setCategories] = useState([]);
+  const [creating, setCreating] = useState(false);
+  const [newArtisan, setNewArtisan] = useState(emptyArtisanForm);
+  const [createSubmitting, setCreateSubmitting] = useState(false);
+  const [createError, setCreateError] = useState('');
+
+  const loadStats = () => adminService.artisanStats().then(setStats);
 
   useEffect(() => {
-    adminService.artisanStats().then(setStats);
+    loadStats();
+    adminService.categories().then((data) => setCategories(data.data ?? data));
   }, []);
 
-  useEffect(() => {
+  const loadArtisans = () => {
     setLoading(true);
-    adminService
+    return adminService
       .artisans({ page, limit: 10, verified: tab || undefined, search: search || undefined })
       .then(setResult)
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadArtisans();
   }, [page, tab, search]);
+
+  const onCreateArtisan = async (event) => {
+    event.preventDefault();
+    setCreateSubmitting(true);
+    setCreateError('');
+    try {
+      await adminService.createArtisan({
+        ...newArtisan,
+        experienceYears: Number(newArtisan.experienceYears),
+        hourlyRate: newArtisan.hourlyRate ? Number(newArtisan.hourlyRate) : undefined,
+      });
+      setNewArtisan(emptyArtisanForm);
+      setCreating(false);
+      await loadArtisans();
+      loadStats();
+    } catch (apiError) {
+      setCreateError(apiError.response?.data?.message || 'Unable to create artisan.');
+    } finally {
+      setCreateSubmitting(false);
+    }
+  };
 
   const setVerified = async (artisan, verified) => {
     setBusyId(artisan.id);
@@ -49,7 +84,7 @@ export function ArtisansPage() {
     <AdminLayout title="Artisans Management" searchPlaceholder="Search artisans by name, category or ID..." onSearch={(value) => { setPage(1); setSearch(value); }}>
       <div className="-mt-4 mb-6 flex flex-wrap items-center justify-between gap-3">
         <p className="max-w-xl text-sm text-on-surface-variant">Manage and validate professional artisans across Burkina Faso.</p>
-        <button type="button" className="flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary hover:brightness-105">
+        <button type="button" onClick={() => setCreating(true)} className="flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary hover:brightness-105">
           <UserPlus className="h-4 w-4" /> Add New Artisan
         </button>
       </div>
@@ -159,6 +194,95 @@ export function ArtisansPage() {
 
         <Pagination page={result.pagination?.page ?? 1} totalPages={result.pagination?.totalPages ?? 1} total={result.pagination?.total ?? 0} onChange={setPage} />
       </section>
+
+      {creating && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-secondary/40 px-4" onClick={() => setCreating(false)}>
+          <div className="w-full max-w-md rounded-lg bg-surface-container-lowest p-6 shadow-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="flex items-start justify-between">
+              <h3 className="font-headline text-xl font-bold">Add New Artisan</h3>
+              <button type="button" onClick={() => setCreating(false)} className="grid h-8 w-8 place-items-center rounded-full hover:bg-surface-container-low">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <form className="mt-4 space-y-3" onSubmit={onCreateArtisan}>
+              <input
+                required
+                placeholder="Full name"
+                value={newArtisan.fullName}
+                onChange={(event) => setNewArtisan((current) => ({ ...current, fullName: event.target.value }))}
+                className="w-full rounded-md border border-outline-variant bg-surface px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+              />
+              <input
+                required
+                type="email"
+                placeholder="Email"
+                value={newArtisan.email}
+                onChange={(event) => setNewArtisan((current) => ({ ...current, email: event.target.value }))}
+                className="w-full rounded-md border border-outline-variant bg-surface px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+              />
+              <input
+                required
+                type="password"
+                placeholder="Password"
+                minLength={6}
+                value={newArtisan.password}
+                onChange={(event) => setNewArtisan((current) => ({ ...current, password: event.target.value }))}
+                className="w-full rounded-md border border-outline-variant bg-surface px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+              />
+              <input
+                placeholder="Phone (optional)"
+                value={newArtisan.phone}
+                onChange={(event) => setNewArtisan((current) => ({ ...current, phone: event.target.value }))}
+                className="w-full rounded-md border border-outline-variant bg-surface px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+              />
+              <input
+                placeholder="City (optional)"
+                value={newArtisan.city}
+                onChange={(event) => setNewArtisan((current) => ({ ...current, city: event.target.value }))}
+                className="w-full rounded-md border border-outline-variant bg-surface px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+              />
+              <select
+                required
+                value={newArtisan.categoryId}
+                onChange={(event) => setNewArtisan((current) => ({ ...current, categoryId: event.target.value }))}
+                className="w-full rounded-md border border-outline-variant bg-surface px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+              >
+                <option value="">Select a category</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>{category.name}</option>
+                ))}
+              </select>
+              <div className="flex gap-3">
+                <input
+                  required
+                  type="number"
+                  min={0}
+                  placeholder="Experience (years)"
+                  value={newArtisan.experienceYears}
+                  onChange={(event) => setNewArtisan((current) => ({ ...current, experienceYears: event.target.value }))}
+                  className="w-full rounded-md border border-outline-variant bg-surface px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                />
+                <input
+                  type="number"
+                  min={0}
+                  placeholder="Hourly rate (optional)"
+                  value={newArtisan.hourlyRate}
+                  onChange={(event) => setNewArtisan((current) => ({ ...current, hourlyRate: event.target.value }))}
+                  className="w-full rounded-md border border-outline-variant bg-surface px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+              {createError && <p className="text-sm font-semibold text-error">{createError}</p>}
+              <button
+                type="submit"
+                disabled={createSubmitting}
+                className="flex w-full items-center justify-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary hover:brightness-105 disabled:opacity-60"
+              >
+                <UserPlus className="h-4 w-4" /> {createSubmitting ? 'Adding...' : 'Add Artisan'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 }

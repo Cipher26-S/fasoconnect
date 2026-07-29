@@ -4,11 +4,13 @@ import {
   artisanParamSchema,
   artisanProfileSchema,
   artisanQuerySchema,
+  createArtisanSchema,
   verifyArtisanSchema,
 } from '../../validators/artisan.validator.js';
 import { serializeArtisan } from '../../utils/serialization.js';
 import {
   upsertArtisanProfile,
+  createArtisanByAdminService,
   listArtisansService,
   getArtisanProfileService,
   getOwnArtisanProfileService,
@@ -56,6 +58,18 @@ export const updateArtisanProfile = asyncHandler(async (req, res, next) => {
   const { artisan, created } = await upsertArtisanProfile(req.user.id, payload);
 
   res.status(created ? 201 : 200).json({ success: true, data: serializeArtisan(artisan) });
+});
+
+export const createArtisan = asyncHandler(async (req, res, next) => {
+  const parsed = createArtisanSchema.safeParse(req.body);
+  if (!parsed.success) {
+    const issue = parsed.error.issues?.[0] || parsed.error.errors?.[0];
+    return next(new AppError(issue?.message || 'Invalid request data', 400));
+  }
+
+  const artisan = await createArtisanByAdminService(parsed.data);
+
+  res.status(201).json({ success: true, data: serializeArtisan(artisan) });
 });
 
 export const listArtisans = asyncHandler(async (req, res, next) => {

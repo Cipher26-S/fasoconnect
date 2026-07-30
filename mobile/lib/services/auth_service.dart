@@ -45,6 +45,12 @@ class AuthService {
     return User.fromJson(data['user'] as Map<String, dynamic>);
   }
 
+  Future<User> updateProfile(Map<String, dynamic> payload) async {
+    final response = await _apiClient.dio.put('/api/users/profile', data: payload);
+    final data = response.data as Map<String, dynamic>;
+    return User.fromJson(data['data'] as Map<String, dynamic>);
+  }
+
   Future<void> logout() async {
     await _apiClient.dio.post('/api/auth/logout');
   }

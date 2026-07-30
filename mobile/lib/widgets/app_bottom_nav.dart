@@ -19,14 +19,30 @@ const List<AppNavDestination> appNavDestinations = [
   AppNavDestination(icon: Icons.person_outline, activeIcon: Icons.person, label: 'Profil'),
 ];
 
+const List<AppNavDestination> artisanNavDestinations = [
+  AppNavDestination(icon: Icons.home_outlined, activeIcon: Icons.home, label: 'Accueil'),
+  AppNavDestination(icon: Icons.work_outline, activeIcon: Icons.work, label: 'Missions'),
+  AppNavDestination(icon: Icons.assignment_turned_in_outlined, activeIcon: Icons.assignment_turned_in, label: 'Mes demandes'),
+  AppNavDestination(icon: Icons.chat_bubble_outline, activeIcon: Icons.chat_bubble, label: 'Messages'),
+  AppNavDestination(icon: Icons.person_outline, activeIcon: Icons.person, label: 'Profil'),
+];
+
+/// The bottom nav's "Recherche" destination means something different for
+/// an artisan (browsing open missions) than for a customer (browsing
+/// artisans), so its label/icon adapt to the signed-in role.
+List<AppNavDestination> navDestinationsForRole(String? role) {
+  return role == 'ARTISAN' ? artisanNavDestinations : appNavDestinations;
+}
+
 /// Frosted, pill-highlighted bottom navigation matching the mockups' glass
 /// nav bar. The "Messages" destination has no backend yet, so tapping it
 /// surfaces a "coming soon" notice instead of a broken screen.
 class AppBottomNav extends StatelessWidget {
-  const AppBottomNav({super.key, required this.index, required this.onChanged});
+  const AppBottomNav({super.key, required this.index, required this.onChanged, this.destinations = appNavDestinations});
 
   final int index;
   final ValueChanged<int> onChanged;
+  final List<AppNavDestination> destinations;
 
   @override
   Widget build(BuildContext context) {
@@ -39,9 +55,9 @@ class AppBottomNav extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              for (var i = 0; i < appNavDestinations.length; i++)
+              for (var i = 0; i < destinations.length; i++)
                 Expanded(
-                  child: _NavItem(destination: appNavDestinations[i], active: i == index, onTap: () => onChanged(i)),
+                  child: _NavItem(destination: destinations[i], active: i == index, onTap: () => onChanged(i)),
                 ),
             ],
           ),

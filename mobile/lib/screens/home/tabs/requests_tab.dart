@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../core/config/app_theme.dart';
 import '../../../models/service_request.dart';
+import '../../../providers/auth_provider.dart';
 import '../../../providers/workflow_provider.dart';
 import '../../../widgets/app_top_bar.dart';
 import '../../request/history_screen.dart';
@@ -71,6 +72,7 @@ class _ActiveRequestCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isArtisanViewer = context.watch<AuthProvider>().user?.role == 'ARTISAN';
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(18),
@@ -98,19 +100,20 @@ class _ActiveRequestCard extends StatelessWidget {
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => TrackingScreen(request: request))),
-                    icon: const Icon(Icons.map_outlined, size: 18),
-                    label: const Text('Suivre'),
+                    icon: Icon(isArtisanViewer ? Icons.call_outlined : Icons.map_outlined, size: 18),
+                    label: Text(isArtisanViewer ? 'Contacter' : 'Suivre'),
                     style: OutlinedButton.styleFrom(foregroundColor: AppColors.onSurface, side: BorderSide(color: AppColors.outlineVariant.withValues(alpha: 0.4)), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.full))),
                   ),
                 ),
-              if (request.artisan != null) const SizedBox(width: 10),
-              Expanded(
-                child: TextButton(
-                  onPressed: () => context.read<WorkflowProvider>().cancel(request.id),
-                  style: TextButton.styleFrom(foregroundColor: AppColors.error),
-                  child: const Text('Annuler', style: TextStyle(fontWeight: FontWeight.w800)),
+              if (request.artisan != null && !isArtisanViewer) const SizedBox(width: 10),
+              if (!isArtisanViewer)
+                Expanded(
+                  child: TextButton(
+                    onPressed: () => context.read<WorkflowProvider>().cancel(request.id),
+                    style: TextButton.styleFrom(foregroundColor: AppColors.error),
+                    child: const Text('Annuler', style: TextStyle(fontWeight: FontWeight.w800)),
+                  ),
                 ),
-              ),
             ],
           ),
         ],

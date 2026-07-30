@@ -19,6 +19,7 @@ class WorkflowProvider extends ChangeNotifier {
   final ApiClient _apiClient;
   late final WorkflowService _service;
   List<ServiceRequest> requests = [];
+  List<ServiceRequest> openRequests = [];
   List<NotificationItem> notifications = [];
   bool loading = false;
   String? error;
@@ -34,6 +35,27 @@ class WorkflowProvider extends ChangeNotifier {
       error = apiErrorMessage(exception);
     } finally {
       loading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadOpenRequests() async {
+    try {
+      openRequests = await _service.openRequestsForArtisan();
+      notifyListeners();
+    } catch (exception) {
+      error = apiErrorMessage(exception);
+      notifyListeners();
+    }
+  }
+
+  Future<void> claim(String serviceRequestId, String artisanId) async {
+    try {
+      await _service.claimRequest(serviceRequestId: serviceRequestId, artisanId: artisanId);
+      await loadOpenRequests();
+      await load();
+    } catch (exception) {
+      error = apiErrorMessage(exception);
       notifyListeners();
     }
   }

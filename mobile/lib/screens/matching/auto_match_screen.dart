@@ -3,16 +3,19 @@ import 'package:provider/provider.dart';
 
 import '../../core/config/app_theme.dart';
 import '../../models/artisan.dart';
+import '../../models/category.dart';
 import '../../providers/catalog_provider.dart';
 import '../../widgets/star_rating.dart';
 import '../artisan/artisan_profile_screen.dart';
 
-enum _Stage { searching, found, empty }
+enum _Stage { selecting, searching, found, empty }
 
 /// Full-screen "auto matching" flow triggered by the home screen's
-/// signature CTA: a short searching animation (recherche_automatique) that
+/// signature CTA: the client first picks the category they need (rather
+/// than silently searching whichever category happens to be first in the
+/// catalog), then a short searching animation (recherche_automatique)
 /// resolves into either a match-found card (artisan_trouvé) or an empty
-/// state if nothing is currently available.
+/// state if nothing is currently available for that category.
 class AutoMatchScreen extends StatefulWidget {
   const AutoMatchScreen({super.key});
 
@@ -21,24 +24,26 @@ class AutoMatchScreen extends StatefulWidget {
 }
 
 class _AutoMatchScreenState extends State<AutoMatchScreen> {
-  _Stage _stage = _Stage.searching;
+  _Stage _stage = _Stage.selecting;
   Artisan? _match;
+  Category? _selectedCategory;
 
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _search());
+  void _selectCategory(Category category) {
+    setState(() {
+      _selectedCategory = category;
+      _stage = _Stage.searching;
+    });
+    _search();
   }
 
   Future<void> _search() async {
     final catalog = context.read<CatalogProvider>();
+    final category = _selectedCategory;
+    if (category == null) return;
     final minimumDelay = Future<void>.delayed(const Duration(milliseconds: 2200));
     List<Artisan> results = const [];
     try {
-      final category = catalog.categories.isNotEmpty ? catalog.categories.first.name : null;
-      if (category != null) {
-        results = await catalog.findRecommendations(category: category);
-      }
+      results = await catalog.findRecommendations(category: category.name);
     } catch (_) {
       results = const [];
     }
@@ -58,6 +63,7 @@ class _AutoMatchScreenState extends State<AutoMatchScreen> {
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: switch (_stage) {
+        _Stage.selecting => _CategorySelectionView(categories: catalog.categories, onSelect: _selectCategory),
         _Stage.searching => _SearchingView(city: city),
         _Stage.found => _MatchFoundView(artisan: _match!),
         _Stage.empty => _EmptyView(onRetry: () {
@@ -65,6 +71,61 @@ class _AutoMatchScreenState extends State<AutoMatchScreen> {
             _search();
           }),
       },
+    );
+  }
+}
+
+class _CategorySelectionView extends StatelessWidget {
+  const _CategorySelectionView({required this.categories, required this.onSelect});
+
+  final List<Category> categories;
+  final ValueChanged<Category> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                IconButton(onPressed: () => Navigator.of(context).maybePop(), icon: const Icon(Icons.arrow_back)),
+                const SizedBox(width: 4),
+                Text('Quel service cherchez-vous ?', style: Theme.of(context).textTheme.titleMedium),
+              ],
+            ),
+            const SizedBox(height: 16),
+            if (categories.isEmpty)
+              const Expanded(child: Center(child: Text('Aucune catégorie disponible pour le moment.')))
+            else
+              Expanded(
+                child: ListView.separated(
+                  itemCount: categories.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  itemBuilder: (context, index) {
+                    final category = categories[index];
+                    return InkWell(
+                      onTap: () => onSelect(category),
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                        decoration: BoxDecoration(color: AppColors.surfaceContainerLow, borderRadius: BorderRadius.circular(AppRadius.md)),
+                        child: Row(
+                          children: [
+                            Expanded(child: Text(category.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15))),
+                            const Icon(Icons.chevron_right, color: AppColors.onSurfaceVariant),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }

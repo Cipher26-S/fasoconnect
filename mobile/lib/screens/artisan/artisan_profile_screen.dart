@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/config/app_theme.dart';
 import '../../models/artisan.dart';
 import '../../models/review.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/catalog_provider.dart';
 import '../../widgets/star_rating.dart';
 import '../request/service_request_screen.dart';
@@ -96,6 +97,7 @@ class _ArtisanProfileBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isCustomer = context.watch<AuthProvider>().user?.role != 'ARTISAN';
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
       children: [
@@ -112,26 +114,28 @@ class _ArtisanProfileBody extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 12),
-        SizedBox(
-          width: double.infinity,
-          child: DecoratedBox(
-            decoration: BoxDecoration(gradient: AppGradients.signature, borderRadius: BorderRadius.circular(AppRadius.full), boxShadow: AppShadows.glow),
-            child: ElevatedButton.icon(
-              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ServiceRequestScreen(artisan: artisan))),
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size.fromHeight(60),
-                backgroundColor: Colors.transparent,
-                shadowColor: Colors.transparent,
-                foregroundColor: Colors.white,
-                textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.full)),
+        if (isCustomer) ...[
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: DecoratedBox(
+              decoration: BoxDecoration(gradient: AppGradients.signature, borderRadius: BorderRadius.circular(AppRadius.full), boxShadow: AppShadows.glow),
+              child: ElevatedButton.icon(
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ServiceRequestScreen(artisan: artisan))),
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(60),
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  foregroundColor: Colors.white,
+                  textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.full)),
+                ),
+                icon: const Icon(Icons.bolt),
+                label: const Text('Demander service'),
               ),
-              icon: const Icon(Icons.bolt),
-              label: const Text('Demander service'),
             ),
           ),
-        ),
+        ],
         const SizedBox(height: 32),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,

@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+
 import '../core/services/api_client.dart';
 import '../models/artisan.dart';
 import '../models/category.dart';
@@ -45,6 +47,27 @@ class CatalogService {
       final map = item as Map<String, dynamic>;
       return Artisan.fromJson((map['artisan'] as Map<String, dynamic>?) ?? map);
     }).toList();
+  }
+
+  /// The calling artisan's own professional profile, or `null` if they
+  /// haven't completed onboarding yet (backend returns 404 in that case).
+  Future<Artisan?> myArtisanProfile() async {
+    try {
+      final response = await _apiClient.dio.get('/api/artisans/profile');
+      final data = response.data as Map<String, dynamic>;
+      return Artisan.fromJson(data['data'] as Map<String, dynamic>);
+    } on DioException catch (exception) {
+      if (exception.response?.statusCode == 404) {
+        return null;
+      }
+      rethrow;
+    }
+  }
+
+  Future<Artisan> upsertArtisanProfile(Map<String, dynamic> payload) async {
+    final response = await _apiClient.dio.post('/api/artisans/profile', data: payload);
+    final data = response.data as Map<String, dynamic>;
+    return Artisan.fromJson(data['data'] as Map<String, dynamic>);
   }
 
   Future<void> addFavorite(String artisanId) async {

@@ -1,27 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/config/app_theme.dart';
 import '../../models/service_request.dart';
+import '../../providers/auth_provider.dart';
 import '../../widgets/nearby_artisans_map.dart';
 
 /// Static "Track Artisan" view: FasoConnect has no live GPS feed yet, so
-/// this shows the artisan's registered position (or the city center as a
-/// fallback) rather than pretending to stream a real-time location.
+/// this shows the counterpart's registered position (or the city center as
+/// a fallback) rather than pretending to stream a real-time location. The
+/// counterpart is role-aware: a customer sees the assigned artisan, while
+/// an artisan sees the customer who owns the request.
 class TrackingScreen extends StatelessWidget {
   const TrackingScreen({super.key, required this.request});
 
   final ServiceRequest request;
 
-  Future<void> _call() async {
-    final phone = request.artisan?.user.phone;
+  Future<void> _call(String? phone) async {
     if (phone == null || phone.isEmpty) return;
     await launchUrl(Uri.parse('tel:$phone'));
   }
 
-  Future<void> _whatsapp() async {
-    final phone = request.artisan?.user.phone;
+  Future<void> _whatsapp(String? phone) async {
     if (phone == null || phone.isEmpty) return;
     final digits = phone.replaceAll(RegExp(r'[^0-9]'), '');
     await launchUrl(Uri.parse('https://wa.me/$digits'), mode: LaunchMode.externalApplication);
@@ -29,7 +31,8 @@ class TrackingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final artisan = request.artisan;
+    final isArtisanViewer = context.watch<AuthProvider>().user?.role == 'ARTISAN';
+    final counterpart = isArtisanViewer ? request.customer : request.artisan?.user;
     return Scaffold(
       backgroundColor: AppColors.surfaceContainerHigh,
       body: Column(
@@ -87,15 +90,15 @@ class TrackingScreen extends StatelessWidget {
                     CircleAvatar(
                       radius: 28,
                       backgroundColor: AppColors.surfaceContainerLow,
-                      backgroundImage: artisan?.user.profilePicture != null ? NetworkImage(artisan!.user.profilePicture!) : null,
-                      child: artisan?.user.profilePicture == null ? const Icon(Icons.person, color: AppColors.primary) : null,
+                      backgroundImage: counterpart?.profilePicture != null ? NetworkImage(counterpart!.profilePicture!) : null,
+                      child: counterpart?.profilePicture == null ? const Icon(Icons.person, color: AppColors.primary) : null,
                     ),
                     const SizedBox(width: 14),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(artisan?.user.fullName ?? 'Artisan', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+                          Text(counterpart?.fullName ?? (isArtisanViewer ? 'Client' : 'Artisan'), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
                           Text(request.category?.name ?? 'Professionnel', style: Theme.of(context).textTheme.bodyMedium),
                         ],
                       ),
@@ -117,9 +120,9 @@ class TrackingScreen extends StatelessWidget {
                 const SizedBox(height: 20),
                 Row(
                   children: [
-                    Expanded(child: _ContactButton(icon: Icons.call, label: 'APPELER', background: AppColors.secondary, onTap: _call)),
+                    Expanded(child: _ContactButton(icon: Icons.call, label: 'APPELER', background: AppColors.secondary, onTap: () => _call(counterpart?.phone))),
                     const SizedBox(width: 12),
-                    Expanded(child: _ContactButton(icon: Icons.chat, label: 'MESSAGE', background: AppColors.primaryContainer, onTap: _whatsapp)),
+                    Expanded(child: _ContactButton(icon: Icons.chat, label: 'MESSAGE', background: AppColors.primaryContainer, onTap: () => _whatsapp(counterpart?.phone))),
                     const SizedBox(width: 12),
                     Expanded(child: _ContactButton(icon: Icons.info_outline, label: 'DÉTAILS', background: AppColors.surfaceContainerHigh, foreground: AppColors.onSurface, onTap: () {})),
                   ],

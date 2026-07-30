@@ -13,6 +13,18 @@ class WorkflowService {
     return (data['data'] as List<dynamic>).map((item) => ServiceRequest.fromJson(item as Map<String, dynamic>)).toList();
   }
 
+  /// Open (PENDING, unassigned) requests in the calling artisan's own
+  /// category — the "missions" an artisan can browse and claim.
+  Future<List<ServiceRequest>> openRequestsForArtisan() async {
+    final response = await _apiClient.dio.get('/api/service-requests', queryParameters: {'scope': 'open', 'limit': 50});
+    final data = response.data as Map<String, dynamic>;
+    return (data['data'] as List<dynamic>).map((item) => ServiceRequest.fromJson(item as Map<String, dynamic>)).toList();
+  }
+
+  Future<void> claimRequest({required String serviceRequestId, required String artisanId}) async {
+    await _apiClient.dio.post('/api/assignments', data: {'serviceRequestId': serviceRequestId, 'artisanId': artisanId});
+  }
+
   Future<void> createRequest(Map<String, dynamic> payload) async {
     await _apiClient.dio.post('/api/service-requests', data: payload);
   }

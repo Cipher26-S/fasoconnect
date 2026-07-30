@@ -6,7 +6,9 @@ import '../../../models/artisan.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/catalog_provider.dart';
 import '../../../widgets/app_top_bar.dart';
+import '../../artisan/artisan_onboarding_screen.dart';
 import '../../artisan/artisan_profile_screen.dart';
+import '../../profile/edit_profile_screen.dart';
 import '../../request/history_screen.dart';
 import '../notifications_sheet.dart';
 
@@ -49,6 +51,20 @@ class ProfileTab extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
+          _ProfileTile(
+            icon: Icons.edit_outlined,
+            label: 'Modifier le profil',
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const EditProfileScreen())),
+          ),
+          if (auth.user?.role == 'ARTISAN') ...[
+            const SizedBox(height: 12),
+            _ProfileTile(
+              icon: Icons.work_outline,
+              label: 'Profil professionnel',
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ArtisanOnboardingScreen())),
+            ),
+          ],
+          const SizedBox(height: 12),
           _ProfileTile(
             icon: Icons.history,
             label: 'Historique des services',

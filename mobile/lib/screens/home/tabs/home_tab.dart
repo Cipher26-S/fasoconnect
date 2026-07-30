@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/config/app_theme.dart';
+import '../../../providers/auth_provider.dart';
 import '../../../providers/catalog_provider.dart';
 import '../../../providers/workflow_provider.dart';
 import '../../../utils/category_icons.dart';
@@ -19,6 +20,7 @@ class HomeTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final catalog = context.watch<CatalogProvider>();
     final workflow = context.watch<WorkflowProvider>();
+    final isArtisan = context.watch<AuthProvider>().user?.role == 'ARTISAN';
     final city = catalog.artisans.isNotEmpty ? (catalog.artisans.first.user.city ?? 'Ouagadougou') : 'Ouagadougou';
     final unread = workflow.notifications.where((n) => !n.isRead).length;
 
@@ -34,9 +36,10 @@ class HomeTab extends StatelessWidget {
           final workflowProvider = context.read<WorkflowProvider>();
           await catalogProvider.load();
           await workflowProvider.load();
+          if (isArtisan) await workflowProvider.loadOpenRequests();
         },
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 140),
+          padding: EdgeInsets.fromLTRB(16, 20, 16, isArtisan ? 32 : 140),
           children: [
             Text('BIENVENUE', style: Theme.of(context).textTheme.labelSmall?.copyWith(color: AppColors.primary)),
             const SizedBox(height: 6),
@@ -45,57 +48,65 @@ class HomeTab extends StatelessWidget {
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 30, height: 1.1),
             ),
             const SizedBox(height: 24),
-            _SearchPrompt(onTap: onFindNow),
+            if (isArtisan)
+              _MissionsPrompt(count: workflow.openRequests.length, onTap: onFindNow)
+            else
+              _SearchPrompt(onTap: onFindNow),
             const SizedBox(height: 32),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text('Nos métiers', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 20)),
-                TextButton(
-                  onPressed: onFindNow,
-                  child: const Text('VOIR TOUT', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w800, fontSize: 12)),
-                ),
+                if (!isArtisan)
+                  TextButton(
+                    onPressed: onFindNow,
+                    child: const Text('VOIR TOUT', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w800, fontSize: 12)),
+                  ),
               ],
             ),
             const SizedBox(height: 12),
             _CategoryBento(names: catalog.categories.map((c) => c.name).toList()),
-            const SizedBox(height: 32),
-            Text('Artisans proches de vous', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 20)),
-            const SizedBox(height: 4),
-            Text('${catalog.artisans.length} experts disponibles à $city', style: Theme.of(context).textTheme.bodyMedium),
-            const SizedBox(height: 14),
-            NearbyArtisansMap(artisans: catalog.artisans),
+            if (!isArtisan) ...[
+              const SizedBox(height: 32),
+              Text('Artisans proches de vous', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 20)),
+              const SizedBox(height: 4),
+              Text('${catalog.artisans.length} experts disponibles à $city', style: Theme.of(context).textTheme.bodyMedium),
+              const SizedBox(height: 14),
+              NearbyArtisansMap(artisans: catalog.artisans),
+            ],
             const SizedBox(height: 12),
           ],
         ),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 76),
-        child: SizedBox(
-          width: MediaQuery.of(context).size.width - 32,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: AppGradients.signature,
-              borderRadius: BorderRadius.circular(AppRadius.full),
-              boxShadow: AppShadows.glow,
-            ),
-            child: ElevatedButton.icon(
-              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AutoMatchScreen())),
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size.fromHeight(60),
-                backgroundColor: Colors.transparent,
-                shadowColor: Colors.transparent,
-                foregroundColor: Colors.white,
-                textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.full)),
+      floatingActionButtonLocation: isArtisan ? null : FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: isArtisan
+          ? null
+          : Padding(
+              padding: const EdgeInsets.only(bottom: 76),
+              child: SizedBox(
+                width: MediaQuery.of(context).size.width - 32,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: AppGradients.signature,
+                    borderRadius: BorderRadius.circular(AppRadius.full),
+                    boxShadow: AppShadows.glow,
+                  ),
+                  child: ElevatedButton.icon(
+                    onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AutoMatchScreen())),
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(60),
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      foregroundColor: Colors.white,
+                      textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.full)),
+                    ),
+                    icon: const Icon(Icons.auto_awesome),
+                    label: const Text('Trouver artisan maintenant'),
+                  ),
+                ),
               ),
-              icon: const Icon(Icons.auto_awesome),
-              label: const Text('Trouver artisan maintenant'),
             ),
-          ),
-        ),
-      ),
     );
   }
 }
@@ -118,6 +129,37 @@ class _SearchPrompt extends StatelessWidget {
             const Icon(Icons.search, color: AppColors.onSurfaceVariant),
             const SizedBox(width: 14),
             Expanded(child: Text('Quel service cherchez-vous ?', style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontSize: 15))),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MissionsPrompt extends StatelessWidget {
+  const _MissionsPrompt({required this.count, required this.onTap});
+
+  final int count;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+        decoration: BoxDecoration(color: AppColors.surfaceContainerHighest, borderRadius: BorderRadius.circular(AppRadius.md)),
+        child: Row(
+          children: [
+            const Icon(Icons.work_outline, color: AppColors.onSurfaceVariant),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                count > 0 ? '$count mission${count > 1 ? 's' : ''} disponible${count > 1 ? 's' : ''} dans votre métier' : 'Voir les missions disponibles',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontSize: 15),
+              ),
+            ),
           ],
         ),
       ),

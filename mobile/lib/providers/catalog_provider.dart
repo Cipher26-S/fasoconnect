@@ -23,6 +23,7 @@ class CatalogProvider extends ChangeNotifier {
   List<Artisan> artisans = [];
   List<Artisan> recommendations = [];
   List<Artisan> favorites = [];
+  Artisan? myArtisanProfile;
   bool loading = false;
   String? error;
 
@@ -41,6 +42,22 @@ class CatalogProvider extends ChangeNotifier {
       loading = false;
       notifyListeners();
     }
+  }
+
+  Future<void> loadMyArtisanProfile() async {
+    try {
+      myArtisanProfile = await _service.myArtisanProfile();
+    } catch (exception) {
+      myArtisanProfile = null;
+    }
+    notifyListeners();
+  }
+
+  Future<Artisan> completeArtisanProfile(Map<String, dynamic> payload) async {
+    final artisan = await _service.upsertArtisanProfile(payload);
+    myArtisanProfile = artisan;
+    notifyListeners();
+    return artisan;
   }
 
   Future<List<Artisan>> findRecommendations({required String category}) {

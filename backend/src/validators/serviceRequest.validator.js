@@ -48,6 +48,7 @@ export const updateServiceRequestStatusSchema = z.object({
 });
 
 export const serviceRequestQuerySchema = z.object({
+  scope: z.enum(['mine', 'open']).optional().default('mine'),
   search: z.string().trim().optional(),
   category: z.string().trim().optional(),
   status: requestStatusSchema.optional(),

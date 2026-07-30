@@ -29,10 +29,88 @@ const getArtisanProfileForUser = async (user) => {
   return prisma.artisan.findUnique({ where: { userId: user.id } });
 };
 
-const assertAdmin = (user) => {
-  if (user.role !== 'ADMIN') {
-    throw new AppError('You do not have permission to perform this action', 403);
+const assertCanAssign = (user, { serviceRequest, artisan, callerArtisan }) => {
+  if (user.role === 'ADMIN') {
+    return;
   }
+
+  if (user.role === 'ARTISAN') {
+    if (!callerArtisan || callerArtisan.id !== artisan.id) {
+      throw new AppError('You can only assign yourself to a service request', 403);
+    }
+    if (serviceRequest.status !== 'PENDING' || serviceRequest.artisanId !== null) {
+      throw new AppError('This service request is no longer available', 409);
+    }
+    if (serviceRequest.categoryId !== artisan.categoryId) {
+      throw new AppError('This service request does not match your category', 403);
+    }
+    return;
+  }
+
+  if (user.role === 'CUSTOMER') {
+    if (serviceRequest.customerId !== user.id) {
+      throw new AppError('You do not have permission to assign an artisan to this service request', 403);
+    }
+    if (serviceRequest.artisanId !== null) {
+      throw new AppError('This service request already has an artisan assigned', 409);
+    }
+    return;
+  }
+
+  throw new AppError('You do not have permission to perform this action', 403);
+};
+
+export const assignArtisanToRequest = async ({ serviceRequest, artisan, assignedByUserId, message }, tx) => {
+  if (serviceRequest.status === 'COMPLETED' || serviceRequest.status === 'CANCELLED') {
+    throw new AppError('Completed or cancelled service requests cannot be assigned', 400);
+  }
+
+  const activeAssignment = await tx.assignment.findFirst({
+    where: {
+      serviceRequestId: serviceRequest.id,
+      status: { in: activeAssignmentStatuses },
+    },
+  });
+
+  if (activeAssignment) {
+    throw new AppError('This service request already has an active assignment', 409);
+  }
+
+  await tx.serviceRequest.update({
+    where: { id: serviceRequest.id },
+    data: {
+      artisanId: artisan.id,
+      status: 'ASSIGNED',
+    },
+  });
+
+  const assignment = await tx.assignment.create({
+    data: {
+      serviceRequestId: serviceRequest.id,
+      artisanId: artisan.id,
+      assignedBy: assignedByUserId,
+      message,
+    },
+    include: assignmentInclude,
+  });
+
+  if (assignedByUserId !== artisan.userId) {
+    await createNotificationRecord({
+      userId: artisan.userId,
+      title: 'New assignment',
+      message: `You have been assigned to service request "${assignment.serviceRequest.title}".`,
+    }, tx);
+  }
+
+  if (assignedByUserId !== serviceRequest.customerId) {
+    await createNotificationRecord({
+      userId: serviceRequest.customerId,
+      title: 'Artisan assigned',
+      message: `An artisan has been assigned to your service request "${assignment.serviceRequest.title}".`,
+    }, tx);
+  }
+
+  return assignment;
 };
 
 const getScopedAssignment = async (id, user) => {
@@ -89,8 +167,6 @@ const buildWhereClause = async (query, user) => {
 };
 
 export const createAssignmentService = async (user, data) => {
-  assertAdmin(user);
-
   const serviceRequest = await prisma.serviceRequest.findUnique({
     where: { id: data.serviceRequestId },
   });
@@ -107,48 +183,16 @@ export const createAssignmentService = async (user, data) => {
     throw new AppError('Artisan not found', 404);
   }
 
-  if (serviceRequest.status === 'COMPLETED' || serviceRequest.status === 'CANCELLED') {
-    throw new AppError('Completed or cancelled service requests cannot be assigned', 400);
-  }
+  const callerArtisan = await getArtisanProfileForUser(user);
 
-  const activeAssignment = await prisma.assignment.findFirst({
-    where: {
-      serviceRequestId: data.serviceRequestId,
-      status: { in: activeAssignmentStatuses },
-    },
-  });
+  assertCanAssign(user, { serviceRequest, artisan, callerArtisan });
 
-  if (activeAssignment) {
-    throw new AppError('This service request already has an active assignment', 409);
-  }
-
-  return prisma.$transaction(async (tx) => {
-    await tx.serviceRequest.update({
-      where: { id: data.serviceRequestId },
-      data: {
-        artisanId: data.artisanId,
-        status: 'ASSIGNED',
-      },
-    });
-
-    const assignment = await tx.assignment.create({
-      data: {
-        serviceRequestId: data.serviceRequestId,
-        artisanId: data.artisanId,
-        assignedBy: user.id,
-        message: data.message,
-      },
-      include: assignmentInclude,
-    });
-
-    await createNotificationRecord({
-      userId: artisan.userId,
-      title: 'New assignment',
-      message: `You have been assigned to service request "${assignment.serviceRequest.title}".`,
-    }, tx);
-
-    return assignment;
-  });
+  return prisma.$transaction(async (tx) => assignArtisanToRequest({
+    serviceRequest,
+    artisan,
+    assignedByUserId: user.id,
+    message: data.message,
+  }, tx));
 };
 
 export const listAssignmentsService = async (query, user) => {

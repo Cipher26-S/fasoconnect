@@ -205,6 +205,60 @@ test('assignment workflow supports create, list, details, accept and complete', 
   }
 });
 
+test('an artisan can self-claim an open request in their own category but not outside it or another customer-owned lock', async () => {
+  const server = app.listen(0);
+
+  try {
+    const admin = await registerUser(server, 'ADMIN', 'claim-admin');
+    const customer = await registerUser(server, 'CUSTOMER', 'claim-customer');
+    const artisanUser = await registerUser(server, 'ARTISAN', 'claim-artisan');
+    const otherArtisanUser = await registerUser(server, 'ARTISAN', 'claim-other-artisan');
+    const category = await createCategory(server, admin.accessToken);
+    const otherCategory = await createCategory(server, admin.accessToken);
+    const artisan = await createArtisanProfile(server, artisanUser.accessToken, category.id);
+    const otherArtisan = await createArtisanProfile(server, otherArtisanUser.accessToken, otherCategory.id, 'Bobo-Dioulasso');
+    const serviceRequest = await createServiceRequest(server, customer.accessToken, category.id, 'Open mission for claim test');
+
+    const openList = await request(server, '/api/service-requests?scope=open', {
+      headers: authHeader(artisanUser.accessToken),
+    });
+    assert.equal(openList.statusCode, 200);
+    assert.ok(openList.body.data.some((item) => item.id === serviceRequest.id));
+
+    const wrongCategoryClaim = await request(server, '/api/assignments', {
+      method: 'POST',
+      headers: authHeader(otherArtisanUser.accessToken),
+      body: { serviceRequestId: serviceRequest.id, artisanId: otherArtisan.id },
+    });
+    assert.equal(wrongCategoryClaim.statusCode, 403);
+
+    const claim = await request(server, '/api/assignments', {
+      method: 'POST',
+      headers: authHeader(artisanUser.accessToken),
+      body: { serviceRequestId: serviceRequest.id, artisanId: artisan.id },
+    });
+    assert.equal(claim.statusCode, 201);
+    assert.equal(claim.body.data.serviceRequest.status, 'ASSIGNED');
+
+    const customerNotifications = await request(server, '/api/notifications?isRead=false&limit=10', {
+      headers: authHeader(customer.accessToken),
+    });
+    assert.equal(customerNotifications.statusCode, 200);
+    assert.ok(customerNotifications.body.data.some((notification) => notification.title === 'Artisan assigned'));
+
+    const secondArtisanUser = await registerUser(server, 'ARTISAN', 'claim-second-artisan');
+    const secondArtisan = await createArtisanProfile(server, secondArtisanUser.accessToken, category.id, 'Koudougou');
+    const alreadyAssignedClaim = await request(server, '/api/assignments', {
+      method: 'POST',
+      headers: authHeader(secondArtisanUser.accessToken),
+      body: { serviceRequestId: serviceRequest.id, artisanId: secondArtisan.id },
+    });
+    assert.equal(alreadyAssignedClaim.statusCode, 409);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
 test('assignment reject, unauthorized access, invalid UUID and invalid transitions are enforced', async () => {
   const server = app.listen(0);
 

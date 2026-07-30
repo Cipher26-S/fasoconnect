@@ -1,6 +1,7 @@
 import { v2 as cloudinary } from 'cloudinary';
 import prisma from '../config/prisma.js';
 import AppError from '../common/appError.js';
+import { assignArtisanToRequest } from './assignment.service.js';
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -9,9 +10,9 @@ cloudinary.config({
 });
 
 const requestInclude = {
-  customer: { select: { id: true, fullName: true, email: true, phone: true, city: true, country: true } },
+  customer: { select: { id: true, fullName: true, email: true, phone: true, city: true, country: true, profilePicture: true } },
   category: true,
-  artisan: { include: { user: { select: { id: true, fullName: true, email: true, phone: true, city: true, country: true } } } },
+  artisan: { include: { user: { select: { id: true, fullName: true, email: true, phone: true, city: true, country: true, profilePicture: true } } } },
   images: true,
 };
 
@@ -175,7 +176,13 @@ const buildWhereClause = async (query, user) => {
 
   if (user.role === 'ARTISAN') {
     const artisan = await getArtisanProfileForUser(user);
-    andFilters.push({ artisanId: artisan?.id || '__no_artisan_profile__' });
+    if (query.scope === 'open') {
+      andFilters.push({ status: 'PENDING' });
+      andFilters.push({ artisanId: null });
+      andFilters.push({ categoryId: artisan?.categoryId || '__no_artisan_profile__' });
+    } else {
+      andFilters.push({ artisanId: artisan?.id || '__no_artisan_profile__' });
+    }
   }
 
   const searchFilters = buildSearchFilters(query.search);
@@ -246,28 +253,47 @@ export const createServiceRequestService = async (user, data, imageUrls = []) =>
 
   const payload = normalizeRequestPayload(data);
   const customerId = user.role === 'ADMIN' ? (payload.customerId || user.id) : user.id;
-
-  if (user.role === 'CUSTOMER') {
-    delete payload.customerId;
-    delete payload.artisanId;
-  }
-
-  if (payload.artisanId) {
-    payload.status = 'ASSIGNED';
-  }
+  const requestedArtisanId = user.role === 'ADMIN' ? undefined : payload.artisanId;
 
   delete payload.customerId;
+  delete payload.artisanId;
+  delete payload.status;
 
   try {
-    return await prisma.serviceRequest.create({
-      data: {
-        ...payload,
-        customerId,
-        images: {
-          create: imageUrls.map((imageUrl) => ({ imageUrl })),
+    return await prisma.$transaction(async (tx) => {
+      const createdRequest = await tx.serviceRequest.create({
+        data: {
+          ...payload,
+          customerId,
+          images: {
+            create: imageUrls.map((imageUrl) => ({ imageUrl })),
+          },
         },
-      },
-      include: requestInclude,
+        include: requestInclude,
+      });
+
+      if (!requestedArtisanId) {
+        return createdRequest;
+      }
+
+      const artisan = await tx.artisan.findUnique({ where: { id: requestedArtisanId } });
+      if (!artisan) {
+        throw new AppError('Artisan not found', 404);
+      }
+      if (artisan.categoryId !== createdRequest.categoryId) {
+        throw new AppError('Selected artisan does not offer this service category', 400);
+      }
+      if (!artisan.availability) {
+        throw new AppError('This artisan is currently unavailable', 400);
+      }
+
+      await assignArtisanToRequest({
+        serviceRequest: createdRequest,
+        artisan,
+        assignedByUserId: customerId,
+      }, tx);
+
+      return tx.serviceRequest.findUnique({ where: { id: createdRequest.id }, include: requestInclude });
     });
   } catch (error) {
     if (error?.code === 'P2003') {

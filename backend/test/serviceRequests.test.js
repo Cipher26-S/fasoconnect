@@ -163,6 +163,57 @@ test('service request workflow supports scoped CRUD, search, filters, sorting an
   }
 });
 
+test('a customer requesting a specific artisan directly gets it assigned immediately and the artisan is notified', async () => {
+  const server = app.listen(0);
+
+  try {
+    const admin = await registerUser(server, 'ADMIN', 'service-direct-admin');
+    const customer = await registerUser(server, 'CUSTOMER', 'service-direct-customer');
+    const artisanUser = await registerUser(server, 'ARTISAN', 'service-direct-artisan');
+    const otherCategoryArtisanUser = await registerUser(server, 'ARTISAN', 'service-direct-other-artisan');
+    const category = await createCategory(server, admin.accessToken);
+    const otherCategory = await createCategory(server, admin.accessToken);
+    const artisan = await createArtisanProfile(server, artisanUser.accessToken, category.id);
+    await createArtisanProfile(server, otherCategoryArtisanUser.accessToken, otherCategory.id);
+
+    const directPick = await request(server, '/api/service-requests', {
+      method: 'POST',
+      headers: authHeader(customer.accessToken),
+      body: {
+        categoryId: category.id,
+        artisanId: artisan.id,
+        title: 'Fix my leaking pipe',
+        description: 'Direct-pick assignment test for a specific artisan.',
+        location: 'Ouagadougou',
+        budget: 12000,
+      },
+    });
+    assert.equal(directPick.statusCode, 201);
+    assert.equal(directPick.body.data.status, 'ASSIGNED');
+    assert.equal(directPick.body.data.artisanId, artisan.id);
+
+    const artisanNotifications = await request(server, '/api/notifications?isRead=false&limit=10', {
+      headers: authHeader(artisanUser.accessToken),
+    });
+    assert.equal(artisanNotifications.statusCode, 200);
+    assert.ok(artisanNotifications.body.data.some((notification) => notification.title === 'New assignment'));
+
+    const mismatchedCategory = await request(server, '/api/service-requests', {
+      method: 'POST',
+      headers: authHeader(customer.accessToken),
+      body: {
+        categoryId: otherCategory.id,
+        artisanId: artisan.id,
+        title: 'Category mismatch test',
+        description: 'This artisan does not offer this category of service.',
+      },
+    });
+    assert.equal(mismatchedCategory.statusCode, 400);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
 test('service request validation and delete authorization are enforced', async () => {
   const server = app.listen(0);
 

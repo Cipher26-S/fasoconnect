@@ -1,5 +1,6 @@
 import asyncHandler from '../../common/asyncHandler.js';
 import AppError from '../../common/appError.js';
+import prisma from '../../config/prisma.js';
 import {
   createServiceRequestSchema,
   serviceRequestParamSchema,
@@ -18,6 +19,15 @@ import {
   uploadServiceRequestImages,
 } from '../../services/serviceRequest.service.js';
 
+const buildViewer = async (user) => {
+  if (user.role !== 'ARTISAN') {
+    return user;
+  }
+
+  const artisan = await prisma.artisan.findUnique({ where: { userId: user.id } });
+  return { ...user, artisanId: artisan?.id };
+};
+
 const parseOrFail = (schema, value, next) => {
   const parsed = schema.safeParse(value);
   if (!parsed.success) {
@@ -35,8 +45,9 @@ export const createServiceRequest = asyncHandler(async (req, res, next) => {
 
   const imageUrls = await uploadServiceRequestImages(req.files);
   const request = await createServiceRequestService(req.user, body, imageUrls);
+  const viewer = await buildViewer(req.user);
 
-  res.status(201).json({ success: true, data: serializeRequest(request) });
+  res.status(201).json({ success: true, data: serializeRequest(request, viewer) });
 });
 
 export const listServiceRequests = asyncHandler(async (req, res, next) => {
@@ -44,10 +55,11 @@ export const listServiceRequests = asyncHandler(async (req, res, next) => {
   if (!query) return;
 
   const result = await listServiceRequestsService(query, req.user);
+  const viewer = await buildViewer(req.user);
 
   res.status(200).json({
     success: true,
-    data: result.data.map(serializeRequest),
+    data: result.data.map((request) => serializeRequest(request, viewer)),
     pagination: result.pagination,
   });
 });
@@ -57,8 +69,9 @@ export const getServiceRequestById = asyncHandler(async (req, res, next) => {
   if (!params) return;
 
   const request = await getServiceRequestByIdService(params.id, req.user);
+  const viewer = await buildViewer(req.user);
 
-  res.status(200).json({ success: true, data: serializeRequest(request) });
+  res.status(200).json({ success: true, data: serializeRequest(request, viewer) });
 });
 
 export const updateServiceRequest = asyncHandler(async (req, res, next) => {
@@ -68,8 +81,9 @@ export const updateServiceRequest = asyncHandler(async (req, res, next) => {
 
   const imageUrls = await uploadServiceRequestImages(req.files);
   const request = await updateServiceRequestService(params.id, req.user, body, imageUrls);
+  const viewer = await buildViewer(req.user);
 
-  res.status(200).json({ success: true, data: serializeRequest(request) });
+  res.status(200).json({ success: true, data: serializeRequest(request, viewer) });
 });
 
 export const updateServiceRequestStatus = asyncHandler(async (req, res, next) => {
@@ -78,8 +92,9 @@ export const updateServiceRequestStatus = asyncHandler(async (req, res, next) =>
   if (!params || !body) return;
 
   const request = await updateServiceRequestStatusService(params.id, req.user, body.status);
+  const viewer = await buildViewer(req.user);
 
-  res.status(200).json({ success: true, data: serializeRequest(request) });
+  res.status(200).json({ success: true, data: serializeRequest(request, viewer) });
 });
 
 export const deleteServiceRequest = asyncHandler(async (req, res, next) => {

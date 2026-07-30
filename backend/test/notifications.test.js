@@ -181,11 +181,14 @@ test('notifications are created from assignment events and can be read by their 
       headers: authHeader(customer.accessToken),
     });
     assert.equal(customerNotifications.statusCode, 200);
-    assert.equal(customerNotifications.body.unreadCount, 2);
-    assert.equal(customerNotifications.body.data.length, 2);
+    // The customer is now notified when the artisan is assigned too (not just
+    // on accept/complete), so a full assign -> accept -> complete cycle
+    // produces three customer-facing notifications.
+    assert.equal(customerNotifications.body.unreadCount, 3);
+    assert.equal(customerNotifications.body.data.length, 3);
     assert.deepEqual(
       customerNotifications.body.data.map((notification) => notification.title).sort(),
-      ['Assignment accepted', 'Service completed'],
+      ['Artisan assigned', 'Assignment accepted', 'Service completed'],
     );
 
     const markAll = await request(server, '/api/notifications/read-all', {
@@ -193,7 +196,7 @@ test('notifications are created from assignment events and can be read by their 
       headers: authHeader(customer.accessToken),
     });
     assert.equal(markAll.statusCode, 200);
-    assert.equal(markAll.body.data.updatedCount, 2);
+    assert.equal(markAll.body.data.updatedCount, 3);
 
     const customerUnread = await request(server, '/api/notifications?isRead=false', {
       headers: authHeader(customer.accessToken),
@@ -205,7 +208,7 @@ test('notifications are created from assignment events and can be read by their 
       headers: authHeader(admin.accessToken),
     });
     assert.equal(adminFiltered.statusCode, 200);
-    assert.equal(adminFiltered.body.data.length, 2);
+    assert.equal(adminFiltered.body.data.length, 3);
     assert.ok(adminFiltered.body.data.every((notification) => notification.userId === customer.user.id));
   } finally {
     await new Promise((resolve) => server.close(resolve));

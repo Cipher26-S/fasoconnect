@@ -13,9 +13,14 @@ export function ServiceRequestsPage() {
   const [status, setStatus] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [result, setResult] = useState({ data: [], pagination: { page: 1, totalPages: 1, total: 0 } });
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
+  const [candidateArtisans, setCandidateArtisans] = useState([]);
+  const [pickedArtisanId, setPickedArtisanId] = useState('');
+  const [assigning, setAssigning] = useState(false);
+  const [assignError, setAssignError] = useState('');
 
   useEffect(() => {
     adminService.requestStats().then(setStats);
@@ -27,7 +32,34 @@ export function ServiceRequestsPage() {
       .serviceRequests({ page, limit: 10, status: status || undefined, search: search || undefined })
       .then(setResult)
       .finally(() => setLoading(false));
-  }, [page, status, search]);
+  }, [page, status, search, refreshKey]);
+
+  useEffect(() => {
+    if (!selected) {
+      setCandidateArtisans([]);
+      setPickedArtisanId('');
+      setAssignError('');
+      return;
+    }
+    adminService
+      .artisans({ category: selected.category?.name, limit: 50 })
+      .then((data) => setCandidateArtisans(data.data ?? data ?? []));
+  }, [selected]);
+
+  const assignArtisan = async () => {
+    if (!selected || !pickedArtisanId) return;
+    setAssigning(true);
+    setAssignError('');
+    try {
+      await adminService.createAssignment(selected.id, pickedArtisanId);
+      setSelected(null);
+      setRefreshKey((key) => key + 1);
+    } catch (error) {
+      setAssignError(error?.response?.data?.message || 'Failed to assign artisan.');
+    } finally {
+      setAssigning(false);
+    }
+  };
 
   const inFlight = (stats?.byStatus?.ASSIGNED ?? 0) + (stats?.byStatus?.ACCEPTED ?? 0) + (stats?.byStatus?.IN_PROGRESS ?? 0);
 
@@ -136,6 +168,38 @@ export function ServiceRequestsPage() {
               <Row label="Location" value={selected.location || '—'} />
               <Row label="Budget" value={selected.budget ? `${selected.budget} FCFA` : '—'} />
             </dl>
+
+            {selected.status !== 'COMPLETED' && selected.status !== 'CANCELLED' && (
+              <div className="mt-4 space-y-2 border-t border-outline-variant pt-4">
+                <p className="text-sm font-semibold text-on-surface-variant">
+                  {selected.artisanId ? 'Reassign artisan' : 'Assign artisan'}
+                </p>
+                <div className="flex gap-2">
+                  <select
+                    value={pickedArtisanId}
+                    onChange={(event) => setPickedArtisanId(event.target.value)}
+                    className="flex-1 rounded-md border border-outline-variant bg-surface px-3 py-2 text-sm"
+                  >
+                    <option value="">Select an artisan…</option>
+                    {candidateArtisans.map((artisan) => (
+                      <option key={artisan.id} value={artisan.id}>
+                        {artisan.user?.fullName || artisan.id}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    disabled={!pickedArtisanId || assigning}
+                    onClick={assignArtisan}
+                    className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-on-primary disabled:opacity-50"
+                  >
+                    {assigning ? 'Assigning…' : selected.artisanId ? 'Reassign' : 'Assign'}
+                  </button>
+                </div>
+                {assignError && <p className="text-sm text-error">{assignError}</p>}
+              </div>
+            )}
+
             <button type="button" onClick={() => setSelected(null)} className="mt-6 w-full rounded-md border border-outline-variant py-2.5 text-sm font-semibold hover:bg-surface-container-low">
               Close
             </button>

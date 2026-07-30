@@ -85,6 +85,14 @@ export const adminService = {
     const { data } = await api.get('/api/service-requests', { params });
     return data;
   },
+  async createAssignment(serviceRequestId, artisanId, message) {
+    const { data } = await api.post('/api/assignments', {
+      serviceRequestId,
+      artisanId,
+      ...(message ? { message } : {}),
+    });
+    return data.data;
+  },
 
   async reviews(params = {}) {
     const { data } = await api.get('/api/reviews', { params });

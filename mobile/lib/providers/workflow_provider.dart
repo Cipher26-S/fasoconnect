@@ -9,7 +9,8 @@ import '../utils/api_error.dart';
 import 'auth_provider.dart';
 
 class WorkflowProvider extends ChangeNotifier {
-  WorkflowProvider(AuthProvider authProvider) : _apiClient = ApiClient(SecureTokenStorage()) {
+  WorkflowProvider(AuthProvider authProvider)
+      : _apiClient = ApiClient(SecureTokenStorage()) {
     _apiClient.onUnauthorized = () {
       authProvider.clearSession();
     };
@@ -51,7 +52,8 @@ class WorkflowProvider extends ChangeNotifier {
 
   Future<void> claim(String serviceRequestId, String artisanId) async {
     try {
-      await _service.claimRequest(serviceRequestId: serviceRequestId, artisanId: artisanId);
+      await _service.claimRequest(
+          serviceRequestId: serviceRequestId, artisanId: artisanId);
       await loadOpenRequests();
       await load();
     } catch (exception) {
@@ -65,9 +67,11 @@ class WorkflowProvider extends ChangeNotifier {
     await load();
   }
 
-  Future<void> cancel(String id) async {
+  Future<void> cancel(String id) => updateStatus(id, 'CANCELLED');
+
+  Future<void> updateStatus(String id, String status) async {
     try {
-      await _service.updateStatus(id, 'CANCELLED');
+      await _service.updateStatus(id, status);
       await load();
     } catch (exception) {
       error = apiErrorMessage(exception);
@@ -85,7 +89,11 @@ class WorkflowProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> submitReview({required String serviceRequestId, required int rating, String? comment}) async {
-    await _service.submitReview(serviceRequestId: serviceRequestId, rating: rating, comment: comment);
+  Future<void> submitReview(
+      {required String serviceRequestId,
+      required int rating,
+      String? comment}) async {
+    await _service.submitReview(
+        serviceRequestId: serviceRequestId, rating: rating, comment: comment);
   }
 }

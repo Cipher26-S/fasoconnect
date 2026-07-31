@@ -39,7 +39,8 @@ class _HomeScreenState extends State<HomeScreen> {
       await catalog.loadMyArtisanProfile();
       if (!mounted) return;
       if (catalog.myArtisanProfile == null) {
-        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ArtisanOnboardingScreen()));
+        Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => const ArtisanOnboardingScreen(mandatory: true)));
       }
     }
   }
@@ -59,7 +60,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       body: IndexedStack(index: _index, children: pages),
-      bottomNavigationBar: AppBottomNav(index: _index, onChanged: _goTo, destinations: navDestinationsForRole(role)),
+      bottomNavigationBar: AppBottomNav(
+          index: _index,
+          onChanged: _goTo,
+          destinations: navDestinationsForRole(role)),
     );
   }
 }

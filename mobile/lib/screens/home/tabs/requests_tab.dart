@@ -18,36 +18,55 @@ class RequestsTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final workflow = context.watch<WorkflowProvider>();
     final active = workflow.requests.where((r) => r.isActive).toList();
-    final recentlyCompleted = workflow.requests.where((r) => r.isCompleted).take(2).toList();
+    final recentlyCompleted =
+        workflow.requests.where((r) => r.isCompleted).take(2).toList();
 
     return Scaffold(
       backgroundColor: AppColors.surface,
-      appBar: AppTopBar(onNotificationsTap: () => showNotificationsSheet(context)),
+      appBar:
+          AppTopBar(onNotificationsTap: () => showNotificationsSheet(context)),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Mes demandes', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 26)),
+              Text('Mes demandes',
+                  style: Theme.of(context)
+                      .textTheme
+                      .headlineMedium
+                      ?.copyWith(fontSize: 26)),
               TextButton(
-                onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const HistoryScreen())),
-                child: const Text('HISTORIQUE', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w800, fontSize: 12)),
+                onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const HistoryScreen())),
+                child: const Text('HISTORIQUE',
+                    style: TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 12)),
               ),
             ],
           ),
           const SizedBox(height: 8),
-          if (workflow.error != null) Text(workflow.error!, style: const TextStyle(color: AppColors.error, fontWeight: FontWeight.w700)),
+          if (workflow.error != null)
+            Text(workflow.error!,
+                style: const TextStyle(
+                    color: AppColors.error, fontWeight: FontWeight.w700)),
           if (active.isEmpty)
             Container(
               margin: const EdgeInsets.only(top: 12),
               padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(color: AppColors.surfaceContainerLow, borderRadius: BorderRadius.circular(AppRadius.lg)),
+              decoration: BoxDecoration(
+                  color: AppColors.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(AppRadius.lg)),
               child: Column(
                 children: [
-                  const Icon(Icons.assignment_turned_in_outlined, size: 40, color: AppColors.onSurfaceVariant),
+                  const Icon(Icons.assignment_turned_in_outlined,
+                      size: 40, color: AppColors.onSurfaceVariant),
                   const SizedBox(height: 12),
-                  Text('Aucune demande active pour le moment.', textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodyMedium),
+                  Text('Aucune demande active pour le moment.',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyMedium),
                 ],
               ),
             )
@@ -55,9 +74,14 @@ class RequestsTab extends StatelessWidget {
             for (final request in active) _ActiveRequestCard(request: request),
           if (recentlyCompleted.isNotEmpty) ...[
             const SizedBox(height: 24),
-            Text('Récemment terminées', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 18)),
+            Text('Récemment terminées',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleLarge
+                    ?.copyWith(fontSize: 18)),
             const SizedBox(height: 12),
-            for (final request in recentlyCompleted) _CompletedRequestCard(request: request),
+            for (final request in recentlyCompleted)
+              _CompletedRequestCard(request: request),
           ],
         ],
       ),
@@ -72,46 +96,102 @@ class _ActiveRequestCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isArtisanViewer = context.watch<AuthProvider>().user?.role == 'ARTISAN';
+    final isArtisanViewer =
+        context.watch<AuthProvider>().user?.role == 'ARTISAN';
+    final artisanAction =
+        isArtisanViewer ? _artisanActionLabel(request.status) : null;
+    final artisanNextStatus =
+        isArtisanViewer ? _artisanNextStatus(request.status) : null;
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(color: AppColors.surfaceContainerLowest, borderRadius: BorderRadius.circular(AppRadius.lg), boxShadow: AppShadows.ambient),
+      decoration: BoxDecoration(
+          color: AppColors.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          boxShadow: AppShadows.ambient),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(child: Text(request.title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800))),
+              Expanded(
+                  child: Text(request.title,
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.w800))),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(color: AppColors.primaryFixed, borderRadius: BorderRadius.circular(AppRadius.full)),
-                child: Text(_statusLabel(request.status), style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w800, fontSize: 11)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                    color: AppColors.primaryFixed,
+                    borderRadius: BorderRadius.circular(AppRadius.full)),
+                child: Text(_statusLabel(request.status),
+                    style: const TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 11)),
               ),
             ],
           ),
           const SizedBox(height: 6),
-          Text(request.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.bodyMedium),
+          Text(request.description,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodyMedium),
           const SizedBox(height: 14),
           Row(
             children: [
               if (request.artisan != null)
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => TrackingScreen(request: request))),
-                    icon: Icon(isArtisanViewer ? Icons.call_outlined : Icons.map_outlined, size: 18),
+                    onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                            builder: (_) => TrackingScreen(request: request))),
+                    icon: Icon(
+                        isArtisanViewer
+                            ? Icons.call_outlined
+                            : Icons.map_outlined,
+                        size: 18),
                     label: Text(isArtisanViewer ? 'Contacter' : 'Suivre'),
-                    style: OutlinedButton.styleFrom(foregroundColor: AppColors.onSurface, side: BorderSide(color: AppColors.outlineVariant.withValues(alpha: 0.4)), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.full))),
+                    style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.onSurface,
+                        side: BorderSide(
+                            color: AppColors.outlineVariant
+                                .withValues(alpha: 0.4)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.circular(AppRadius.full))),
                   ),
                 ),
-              if (request.artisan != null && !isArtisanViewer) const SizedBox(width: 10),
-              if (!isArtisanViewer)
+              if (request.artisan != null &&
+                  (isArtisanViewer ? artisanAction != null : true))
+                const SizedBox(width: 10),
+              if (isArtisanViewer && artisanAction != null)
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => context
+                        .read<WorkflowProvider>()
+                        .updateStatus(request.id, artisanNextStatus!),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.full)),
+                    ),
+                    child: Text(artisanAction,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w800, fontSize: 13)),
+                  ),
+                )
+              else if (!isArtisanViewer)
                 Expanded(
                   child: TextButton(
-                    onPressed: () => context.read<WorkflowProvider>().cancel(request.id),
-                    style: TextButton.styleFrom(foregroundColor: AppColors.error),
-                    child: const Text('Annuler', style: TextStyle(fontWeight: FontWeight.w800)),
+                    onPressed: () =>
+                        context.read<WorkflowProvider>().cancel(request.id),
+                    style:
+                        TextButton.styleFrom(foregroundColor: AppColors.error),
+                    child: const Text('Annuler',
+                        style: TextStyle(fontWeight: FontWeight.w800)),
                   ),
                 ),
             ],
@@ -130,6 +210,24 @@ class _ActiveRequestCard extends StatelessWidget {
       _ => status,
     };
   }
+
+  String? _artisanActionLabel(String status) {
+    return switch (status) {
+      'ASSIGNED' => 'Accepter la mission',
+      'ACCEPTED' => 'Démarrer l\'intervention',
+      'IN_PROGRESS' => 'Marquer terminé',
+      _ => null,
+    };
+  }
+
+  String? _artisanNextStatus(String status) {
+    return switch (status) {
+      'ASSIGNED' => 'ACCEPTED',
+      'ACCEPTED' => 'IN_PROGRESS',
+      'IN_PROGRESS' => 'COMPLETED',
+      _ => null,
+    };
+  }
 }
 
 class _CompletedRequestCard extends StatelessWidget {
@@ -139,19 +237,29 @@ class _CompletedRequestCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isArtisanViewer =
+        context.watch<AuthProvider>().user?.role == 'ARTISAN';
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: AppColors.surfaceContainerLow, borderRadius: BorderRadius.circular(AppRadius.lg)),
+      decoration: BoxDecoration(
+          color: AppColors.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(AppRadius.lg)),
       child: Row(
         children: [
           const Icon(Icons.check_circle, color: AppColors.primary),
           const SizedBox(width: 12),
-          Expanded(child: Text(request.title, style: const TextStyle(fontWeight: FontWeight.w700))),
-          TextButton(
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => RatingScreen(request: request))),
-            child: const Text('Noter', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w800)),
-          ),
+          Expanded(
+              child: Text(request.title,
+                  style: const TextStyle(fontWeight: FontWeight.w700))),
+          if (!isArtisanViewer)
+            TextButton(
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => RatingScreen(request: request))),
+              child: const Text('Noter',
+                  style: TextStyle(
+                      color: AppColors.primary, fontWeight: FontWeight.w800)),
+            ),
         ],
       ),
     );

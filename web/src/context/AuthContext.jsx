@@ -73,9 +73,22 @@ export function AuthProvider({ children }) {
     }
   }, [clearSession]);
 
+  const updateProfile = useCallback(async (payload) => {
+    setError('');
+    try {
+      const updatedUser = await authService.updateProfile(payload);
+      setUser(updatedUser);
+      return updatedUser;
+    } catch (apiError) {
+      const message = getApiErrorMessage(apiError);
+      setError(message);
+      throw new Error(message);
+    }
+  }, []);
+
   const value = useMemo(
-    () => ({ user, error, bootstrapping, isAuthenticated: Boolean(user), login, register, logout }),
-    [user, error, bootstrapping, login, register, logout],
+    () => ({ user, error, bootstrapping, isAuthenticated: Boolean(user), login, register, logout, updateProfile }),
+    [user, error, bootstrapping, login, register, logout, updateProfile],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

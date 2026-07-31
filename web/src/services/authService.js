@@ -17,4 +17,8 @@ export const authService = {
     const { data } = await api.post('/api/auth/logout');
     return data;
   },
+  async updateProfile(payload) {
+    const { data } = await api.put('/api/users/profile', payload);
+    return data.data;
+  },
 };

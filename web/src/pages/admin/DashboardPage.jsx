@@ -52,6 +52,36 @@ export function DashboardPage() {
   const totals = summary?.totals || {};
   const performance = summary?.performance || {};
   const verificationRate = artisanStats?.total ? Math.round((artisanStats.verified / artisanStats.total) * 100) : 0;
+  const registeredArtisans = totals.registeredArtisans ?? totals.artisans ?? 0;
+
+  const handleExport = () => {
+    if (!summary || !artisanStats) return;
+
+    const rows = [
+      ['Metric', 'Value'],
+      ['Total Users', totals.users ?? 0],
+      ['Total Customers', (totals.users ?? 0) - registeredArtisans],
+      ['Registered Artisans', registeredArtisans],
+      ['Artisans With Complete Profile', totals.artisans ?? 0],
+      ['Categories', totals.categories ?? 0],
+      ['Service Requests', totals.serviceRequests ?? 0],
+      ['Completed Requests', performance.completedRequests ?? 0],
+      ['Completion Rate (%)', performance.completionRate ?? 0],
+      ['Average Rating', performance.averageRating ?? ''],
+      ['Verified Artisans', artisanStats.verified ?? 0],
+      ['Pending Artisan Verification', artisanStats.unverified ?? 0],
+    ];
+    const csv = rows.map((row) => row.map(csvEscape).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `fasoconnect-dashboard-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <AdminLayout title="Tableau de bord">
@@ -59,7 +89,9 @@ export function DashboardPage() {
         <p className="max-w-xl text-sm text-on-surface-variant">Monitoring system performance and operational flows in Burkina Faso.</p>
         <button
           type="button"
-          className="flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary hover:brightness-105"
+          onClick={handleExport}
+          disabled={loading}
+          className="flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Download className="h-4 w-4" /> Export Data
         </button>
@@ -67,8 +99,13 @@ export function DashboardPage() {
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard icon={Users} label="Total Users" value={loading ? '—' : totals.users ?? 0} hint="All platform accounts" />
-        <StatCard icon={UserCog} label="Total Customers" value={loading ? '—' : (totals.users ?? 0) - (totals.artisans ?? 0)} hint="Service seekers" />
-        <StatCard icon={Wrench} label="Total Artisans" value={loading ? '—' : totals.artisans ?? 0} hint="Registered professionals" />
+        <StatCard icon={UserCog} label="Total Customers" value={loading ? '—' : (totals.users ?? 0) - registeredArtisans} hint="Service seekers" />
+        <StatCard
+          icon={Wrench}
+          label="Total Artisans"
+          value={loading ? '—' : registeredArtisans}
+          hint={loading ? undefined : `${totals.artisans ?? 0} with complete profile`}
+        />
         <StatCard icon={ClipboardList} label="Pending Requests" value={loading ? '—' : performance.completionRate !== undefined ? (totals.serviceRequests ?? 0) - (performance.completedRequests ?? 0) : '—'} hint="Awaiting assignment" />
       </div>
 
@@ -215,6 +252,11 @@ export function DashboardPage() {
       </div>
     </AdminLayout>
   );
+}
+
+function csvEscape(value) {
+  const text = String(value ?? '');
+  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 
 function formatMonth(key) {

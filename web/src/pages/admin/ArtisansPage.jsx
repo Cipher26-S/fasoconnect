@@ -90,7 +90,12 @@ export function ArtisansPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard icon={Wrench} label="Total Artisans" value={stats?.total ?? '—'} />
+        <StatCard
+          icon={Wrench}
+          label="Total Artisans"
+          value={stats?.registered ?? '—'}
+          hint={stats ? `${stats.total} with complete profile · ${stats.incompleteProfiles} pending onboarding` : undefined}
+        />
         <StatCard icon={ShieldCheck} label="Verified" value={stats?.verified ?? '—'} iconBg="bg-success/10" iconColor="text-success" />
         <StatCard icon={XCircle} label="Pending Validation" value={stats?.unverified ?? '—'} iconBg="bg-warning/10" iconColor="text-warning" />
         <StatCard icon={Star} label="Top Category" value={topCategory?.categoryName || '—'} hint={topCategory ? `${topCategory.count} active professionals` : undefined} />

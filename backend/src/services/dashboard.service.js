@@ -75,6 +75,7 @@ export const getDashboardSummaryService = async () => {
   const [
     users,
     artisans,
+    registeredArtisans,
     categories,
     serviceRequests,
     assignments,
@@ -86,6 +87,7 @@ export const getDashboardSummaryService = async () => {
   ] = await prisma.$transaction([
     prisma.user.count(),
     prisma.artisan.count(),
+    prisma.user.count({ where: { role: 'ARTISAN' } }),
     prisma.category.count(),
     prisma.serviceRequest.count(),
     prisma.assignment.count(),
@@ -104,6 +106,7 @@ export const getDashboardSummaryService = async () => {
     totals: {
       users,
       artisans,
+      registeredArtisans,
       categories,
       serviceRequests,
       assignments,
@@ -135,8 +138,9 @@ export const getUserStatisticsService = async () => {
 };
 
 export const getArtisanStatisticsService = async () => {
-  const [total, verified, available, byCategoryGroups] = await prisma.$transaction([
+  const [total, registered, verified, available, byCategoryGroups] = await prisma.$transaction([
     prisma.artisan.count(),
+    prisma.user.count({ where: { role: 'ARTISAN' } }),
     prisma.artisan.count({ where: { verified: true } }),
     prisma.artisan.count({ where: { availability: true } }),
     prisma.artisan.groupBy({ by: ['categoryId'], _count: { _all: true } }),
@@ -150,6 +154,8 @@ export const getArtisanStatisticsService = async () => {
 
   return {
     total,
+    registered,
+    incompleteProfiles: registered - total,
     verified,
     unverified: total - verified,
     available,

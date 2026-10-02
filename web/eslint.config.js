@@ -26,12 +26,14 @@ export default [
         ecmaFeatures: { jsx: true },
       },
       globals: {
+        Blob: 'readonly',
         clearTimeout: 'readonly',
         document: 'readonly',
         Event: 'readonly',
         window: 'readonly',
         localStorage: 'readonly',
         setTimeout: 'readonly',
+        URL: 'readonly',
       },
     },
     plugins: {
